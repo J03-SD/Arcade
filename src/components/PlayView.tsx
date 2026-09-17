@@ -2,6 +2,7 @@
 
 import { GameShell } from "./GameShell";
 import { AliasGame } from "@/games/alias/AliasGame";
+import { BedazelGame } from "@/games/bedazel/BedazelGame";
 import { CrosswordGame } from "@/games/crossword/CrosswordGame";
 import { CrushGame } from "@/games/crush/CrushGame";
 import { PivotGame } from "@/games/pivot/PivotGame";
@@ -35,6 +36,8 @@ export function PlayView({
             return <CrosswordGame key={key} {...props} />;
           case "search":
             return <SearchGame key={key} {...props} />;
+          case "bedazel":
+            return <BedazelGame key={key} {...props} />;
           case "signal":
             return <SignalGame key={key} {...props} />;
         }

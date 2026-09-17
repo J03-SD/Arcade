@@ -42,6 +42,12 @@ export function PixelDissolve() {
     const onPointerDown = (event: Event) => {
       if (!isInternalNav(event)) return;
       armed.current = true;
+      // Cloning the page on touchstart cancels the synthetic click on iOS /
+      // Android, which feels like a double-tap. Prep on mouse/pen only;
+      // touch captures on the click that actually navigates.
+      const pointerType =
+        "pointerType" in event ? String((event as PointerEvent).pointerType) : "";
+      if (pointerType === "touch") return;
       preparePixelDissolveSnap();
     };
 
@@ -61,6 +67,8 @@ export function PixelDissolve() {
         return;
       }
       armed.current = false;
+      // Touch never prepped on pointerdown — freeze now, still before route swap.
+      preparePixelDissolveSnap();
       window.setTimeout(() => {
         startPixelDissolve(node);
       }, 0);

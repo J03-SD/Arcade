@@ -22,7 +22,7 @@ function context() {
     master.connect(ctx.destination);
   }
   if (master) master.gain.value = MASTER_GAIN;
-  if (sfxBus) sfxBus.gain.value = SFX_BUS_GAIN;
+  if (sfxBus) sfxBus.gain.value = sfxBusGain();
   return ctx;
 }
 
@@ -41,8 +41,22 @@ export function getMasterGain() {
   return master;
 }
 
+function sfxLevel() {
+  const value = loadProgress().sfxVolume;
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+}
+
+function sfxBusGain() {
+  return isMuted() ? 0 : SFX_BUS_GAIN * sfxLevel();
+}
+
 export function isMuted() {
   return loadProgress().muted;
+}
+
+export function applySfxVolume() {
+  context();
+  if (sfxBus) sfxBus.gain.value = sfxBusGain();
 }
 
 export async function unlockAudio() {
@@ -342,6 +356,11 @@ export const sfx = {
     tone(784, 0.18, "square", 0.24, 0.07);
   },
   select: () => tone(520, 0.07, "sine", 0.55),
+  gem: () => {
+    tone(880, 0.045, "triangle", 0.42);
+    tone(1320, 0.06, "sine", 0.36, 0.02);
+    tone(1760, 0.08, "sine", 0.22, 0.045);
+  },
   erase: () => {
     tone(420, 0.08, "sine", 0.4);
     tone(280, 0.1, "triangle", 0.32, 0.03);

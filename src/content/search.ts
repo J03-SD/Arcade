@@ -15,7 +15,7 @@ export type SearchBoard = {
   placed: SearchPlacement[];
 };
 
-const SIZE = 10;
+const SIZE = 8;
 const TARGET_WORDS = 5;
 const HEAT_RADIUS = 2;
 
@@ -69,7 +69,7 @@ const THEMES = [
   },
   {
     id: "identity",
-    title: "Identity & Breadcrumbs",
+    title: "Identity and Breadcrumbs",
     words: [
       "IDENTITY",
       "ALIAS",
@@ -79,13 +79,13 @@ const THEMES = [
       "SIGNAL",
       "PIVOT",
       "VALIDATE",
-      "FOOTPRINT",
-      "ATTRIBUTE",
+      "TRAIL",
+      "HANDLE",
     ],
   },
   {
     id: "networks",
-    title: "Networks & Connections",
+    title: "Networks and Connections",
     words: [
       "NETWORK",
       "GRAPH",
@@ -96,12 +96,12 @@ const THEMES = [
       "CONTEXT",
       "DISCOVER",
       "CONNECT",
-      "ASSOCIATE",
+      "RELATE",
     ],
   },
   {
     id: "monitor",
-    title: "Monitor & Respond",
+    title: "Monitor and Respond",
     words: [
       "MONITOR",
       "ALERT",
@@ -152,8 +152,9 @@ function kindOfCells(cells: [number, number][]): DirKind {
 }
 
 function band(i: number) {
-  if (i < 3) return 0;
-  if (i < 7) return 1;
+  const third = SIZE / 3;
+  if (i < third) return 0;
+  if (i < third * 2) return 1;
   return 2;
 }
 
@@ -381,7 +382,7 @@ function coverageOk(placed: SearchPlacement[]) {
     for (const [r, c] of item.cells) covered.add(`${r}:${c}`);
   }
   // Prefer boards that use a decent slice of the grid, not one clump.
-  return covered.size >= Math.min(22, placed.reduce((n, item) => n + item.word.length, 0) - 4);
+  return covered.size >= Math.min(16, placed.reduce((n, item) => n + item.word.length, 0) - 4);
 }
 
 function tryOrder(candidates: Candidate[], rng: () => number, attempts: number) {

@@ -21,7 +21,22 @@ function SearchMark({ className = "h-10 w-10" }: { className?: string }) {
   );
 }
 
+function BedazelMark({ className = "h-10 w-10" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="4.2" fill="currentColor" opacity="0.22" />
+      <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="6.2" cy="8.2" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="17.8" cy="8.4" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="7.2" cy="16.6" r="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="16.6" cy="16.2" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="12" cy="5.2" r="1.5" fill="currentColor" opacity="0.55" />
+    </svg>
+  );
+}
+
 export function GameMark({ mode, className }: { mode: GameMode; className?: string }) {
   if (mode === "search") return <SearchMark className={className} />;
+  if (mode === "bedazel") return <BedazelMark className={className} />;
   return <CrosswordMark className={className} />;
 }

@@ -50,6 +50,15 @@ function muted() {
   return loadProgress().muted;
 }
 
+function musicLevel() {
+  const value = loadProgress().musicVolume;
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+}
+
+function mixedBed(base = targetVolume) {
+  return base * musicLevel();
+}
+
 function hidden() {
   return typeof document !== "undefined" && document.hidden;
 }
@@ -408,8 +417,8 @@ export function startArcadeTheme() {
       await startVoice(currentSrc, offset, 0.05);
     }
 
-    if (bedGain.gain.value < targetVolume * 0.5) {
-      setBedVolume(targetVolume, 0);
+    if (bedGain.gain.value < mixedBed() * 0.5) {
+      setBedVolume(mixedBed(), 0);
     }
   })();
 }
@@ -419,8 +428,13 @@ export function fadeArcadeThemeTo(to: number, ms = 900) {
   targetVolume = to;
   void resumeContext().then(() => {
     startArcadeTheme();
-    setBedVolume(to, ms);
+    setBedVolume(mixedBed(to), ms);
   });
+}
+
+export function applyMusicVolume() {
+  if (muted() || hidden() || !armed) return;
+  setBedVolume(mixedBed(), 80);
 }
 
 export function fadeArcadeThemeIn(ms = 900) {
@@ -443,7 +457,7 @@ export function playArcadeThemeIntro() {
     currentSrc = THEME_OPENER;
     refillBag(THEME_OPENER);
     pauseOffset = null;
-    setBedVolume(INTRO_VOLUME, 0);
+    setBedVolume(mixedBed(INTRO_VOLUME), 0);
 
     const ready = buffers.get(THEME_OPENER);
     if (ready) {
@@ -455,14 +469,14 @@ export function playArcadeThemeIntro() {
   }
 
   startArcadeTheme();
-  setBedVolume(INTRO_VOLUME, 0);
+  setBedVolume(mixedBed(INTRO_VOLUME), 0);
 }
 
 export function resumeArcadeTheme() {
   if (!armed || muted() || hidden()) return;
   void resumeContext().then(() => {
     startArcadeTheme();
-    setBedVolume(targetVolume, 120);
+    setBedVolume(mixedBed(), 120);
   });
 }
 

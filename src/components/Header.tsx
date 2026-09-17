@@ -15,9 +15,9 @@ export function Header(_props: { dayIndex?: number } = {}) {
             <Image
               src="/brand/dragon-mark.png"
               alt="ShadowDragon"
-              width={48}
-              height={48}
-              className="h-12 w-12"
+              width={192}
+              height={110}
+              className="h-10 w-auto"
               priority
             />
           </Link>

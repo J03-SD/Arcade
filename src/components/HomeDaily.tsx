@@ -10,6 +10,7 @@ import { loadProgress } from "@/lib/progress";
 const CARD_CLASS: Record<LaunchMode, string> = {
   crossword: "game-card game-card--crossword",
   search: "game-card game-card--search",
+  bedazel: "game-card game-card--bedazel",
 };
 
 export function HomeDaily({ dayIndex }: { dayIndex: number }) {
@@ -33,7 +34,7 @@ export function HomeDaily({ dayIndex }: { dayIndex: number }) {
 
   return (
     <main className="dock-space mx-auto flex w-full max-w-[430px] flex-1 flex-col justify-center px-4 pt-2 md:max-w-[540px]">
-      <div className="surface grid w-full grid-rows-2 gap-3.5 rounded-[var(--radius)] p-3.5 md:min-h-[min(560px,calc(100dvh-220px))]">
+      <div className="surface grid w-full grid-rows-3 gap-3.5 rounded-[var(--radius)] p-3.5 md:min-h-[min(640px,calc(100dvh-200px))]">
         {LAUNCH_MODES.map((mode) => {
           const meta = MODE_META[mode];
           const locked = isComingSoonMode(mode);

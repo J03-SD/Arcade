@@ -9,7 +9,7 @@ export default function LeaderboardPage() {
     <div className="horizon-bg flex min-h-dvh flex-col">
       <Header dayIndex={today} />
       <PageFade className="flex flex-1 flex-col">
-        <LeaderboardView dayIndex={today} />
+        <LeaderboardView />
       </PageFade>
     </div>
   );

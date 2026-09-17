@@ -15,6 +15,10 @@ export type Progress = {
   bestStreak: number;
   lastDailyDay: number | null;
   muted: boolean;
+  /** 0–1 mix for arcade theme. */
+  musicVolume: number;
+  /** 0–1 mix for UI and game SFX. */
+  sfxVolume: number;
   dragonFinds: number;
   records: DayRecord[];
 };
@@ -24,16 +28,29 @@ const empty = (): Progress => ({
   bestStreak: 0,
   lastDailyDay: null,
   muted: false,
+  musicVolume: 1,
+  sfxVolume: 1,
   dragonFinds: 0,
   records: [],
 });
+
+function clamp01(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(1, Math.max(0, value));
+}
 
 export function loadProgress(): Progress {
   if (typeof window === "undefined") return empty();
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return empty();
-    return { ...empty(), ...JSON.parse(raw) } as Progress;
+    const parsed = JSON.parse(raw) as Partial<Progress>;
+    return {
+      ...empty(),
+      ...parsed,
+      musicVolume: clamp01(parsed.musicVolume ?? 1),
+      sfxVolume: clamp01(parsed.sfxVolume ?? 1),
+    };
   } catch {
     return empty();
   }
@@ -83,4 +100,15 @@ export function setMuted(progress: Progress, muted: boolean): Progress {
 export function toggleMuted(): Progress {
   const progress = loadProgress();
   return setMuted(progress, !progress.muted);
+}
+
+export function setAudioLevels(patch: { musicVolume?: number; sfxVolume?: number }): Progress {
+  const progress = loadProgress();
+  const next = {
+    ...progress,
+    musicVolume: patch.musicVolume != null ? clamp01(patch.musicVolume) : progress.musicVolume,
+    sfxVolume: patch.sfxVolume != null ? clamp01(patch.sfxVolume) : progress.sfxVolume,
+  };
+  saveProgress(next);
+  return next;
 }

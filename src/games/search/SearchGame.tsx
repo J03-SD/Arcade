@@ -53,6 +53,31 @@ function pathsEqual(a: [number, number][], b: [number, number][]) {
   return a.length === b.length && a.every(([r, c], i) => r === b[i]![0] && c === b[i]![1]);
 }
 
+function cellsEqual(a: [number, number], b: [number, number]) {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+function lineBetween(from: [number, number], to: [number, number]): [number, number][] | null {
+  const dr = to[0] - from[0];
+  const dc = to[1] - from[1];
+  if (dr === 0 && dc === 0) return [from];
+  const steps = Math.max(Math.abs(dr), Math.abs(dc));
+  if (dr % steps !== 0 || dc % steps !== 0) return null;
+  const udr = dr / steps;
+  const udc = dc / steps;
+  if (!DIRS.some(([r, c]) => r === udr && c === udc)) return null;
+  const cells: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    cells.push([from[0] + udr * i, from[1] + udc * i]);
+  }
+  return cells;
+}
+
+function pathIsPrefix(short: [number, number][], long: [number, number][]) {
+  if (short.length === 0 || short.length > long.length) return false;
+  return short.every((cell, i) => cellsEqual(cell, long[i]!));
+}
+
 type Point = { x: number; y: number };
 
 function PathLines({
@@ -111,6 +136,13 @@ function freshSeed(dayIndex: number) {
   return (clock ^ jitter ^ fine ^ (dayIndex * 2654435761)) >>> 0;
 }
 
+function wordRows(words: string[]) {
+  const sorted = [...words].sort((a, b) => a.length - b.length || a.localeCompare(b));
+  if (sorted.length <= 2) return [sorted];
+  const top = Math.ceil(sorted.length / 2);
+  return [sorted.slice(0, top), sorted.slice(top)];
+}
+
 export function SearchGame({
   dayIndex,
   onComplete,
@@ -120,6 +152,7 @@ export function SearchGame({
 }) {
   const [visitSeed, setVisitSeed] = useState(() => freshSeed(dayIndex));
   const board = useMemo(() => getSearch(dayIndex, visitSeed), [dayIndex, visitSeed]);
+  const listedRows = useMemo(() => wordRows(board.words), [board.words]);
   const { burstWord, reset } = useScoreHud();
   const [found, setFound] = useState<string[]>([]);
   const [path, setPath] = useState<[number, number][]>([]);
@@ -131,6 +164,8 @@ export function SearchGame({
   const [reveal, setReveal] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const movedRef = useRef(false);
+  const downCell = useRef<[number, number] | null>(null);
   const pathRef = useRef<[number, number][]>([]);
   const startRef = useRef<[number, number] | null>(null);
   const dirRef = useRef<[number, number] | null>(null);
@@ -153,6 +188,8 @@ export function SearchGame({
   const shuffleBoard = useCallback(() => {
     clearTimers();
     dragging.current = false;
+    movedRef.current = false;
+    downCell.current = null;
     pathRef.current = [];
     startRef.current = null;
     dirRef.current = null;
@@ -498,39 +535,129 @@ export function SearchGame({
     }
   };
 
+  const applyLine = (line: [number, number][]) => {
+    const prevLen = pathRef.current.length;
+    const start = line[0]!;
+    startRef.current = start;
+    if (line.length >= 2) {
+      dirRef.current = [line[1]![0] - start[0], line[1]![1] - start[1]];
+    } else {
+      dirRef.current = null;
+    }
+    commitPath(line, line.length >= prevLen ? "connect" : "disconnect");
+    const match = board.placed.find((item) => samePath(item.cells, line) && !found.includes(item.word));
+    if (match) endPath(line);
+  };
+
+  const handleTap = (cell: [number, number] | null) => {
+    if (!cell) return;
+    const current = pathRef.current;
+
+    if (!current.length) {
+      startRef.current = cell;
+      dirRef.current = null;
+      commitPath([cell], "connect");
+      return;
+    }
+
+    if (current.some((item) => cellsEqual(item, cell))) return;
+
+    const start = current[0]!;
+    const line = lineBetween(start, cell);
+    if (current.length === 1) {
+      if (line) {
+        applyLine(line);
+        return;
+      }
+      startRef.current = cell;
+      dirRef.current = null;
+      commitPath([cell], "connect");
+      return;
+    }
+
+    if (line && pathIsPrefix(current, line)) {
+      applyLine(line);
+      return;
+    }
+
+    endPath(current);
+  };
+
+  const finishPointer = () => {
+    dragging.current = false;
+    if (movedRef.current) {
+      endPath(pathRef.current);
+      return;
+    }
+    handleTap(downCell.current);
+  };
+
   const pathKeys = new Set(path.map(([r, c]) => keyOf(r, c)));
 
   return (
-    <div className="min-w-0">
-      <p className="text-center font-season text-[1.25rem] leading-none tracking-[-0.03em] text-white">
-        {board.title}
-      </p>
+    <div className="search-play min-w-0">
+      <p className="search-title">{board.title}</p>
 
       <div
         ref={boardRef}
-        className="play-board relative mt-5 aspect-square w-full touch-none"
+        className="play-board search-grid relative mt-5 aspect-square w-full touch-none"
         onPointerDown={(event) => {
           void unlockAudio();
           measure();
-          dragging.current = true;
           event.currentTarget.setPointerCapture(event.pointerId);
           const point = pointerOnBoard(event.clientX, event.clientY);
           if (!point) return;
           const start = nearestCell(point.x, point.y);
-          startRef.current = start;
-          dirRef.current = null;
-          pathRef.current = [];
-          stepAtRef.current = [performance.now()];
-          commitPath([start], "connect");
+          downCell.current = start;
+          movedRef.current = false;
+          dragging.current = true;
+
+          if (failing || failTimer.current) {
+            clearFailUnwind();
+            setFailing(false);
+            pathRef.current = [];
+            startRef.current = null;
+            dirRef.current = null;
+            stepAtRef.current = [];
+            setPath([]);
+            setPulse(null);
+          }
+
+          if (!pathRef.current.length) {
+            startRef.current = start;
+            dirRef.current = null;
+            commitPath([start], "connect");
+          }
         }}
         onPointerMove={(event) => {
           if (!dragging.current) return;
           const point = pointerOnBoard(event.clientX, event.clientY);
           if (!point) return;
+          const cell = nearestCell(point.x, point.y);
+          if (!movedRef.current) {
+            if (!downCell.current || cellsEqual(cell, downCell.current)) return;
+            movedRef.current = true;
+            const originCell = downCell.current;
+            const current = pathRef.current;
+            const origin = current[0];
+            const line = origin ? lineBetween(origin, originCell) : null;
+            const continues =
+              Boolean(origin) &&
+              (current.some((item) => cellsEqual(item, originCell)) ||
+                (line != null &&
+                  (current.length === 1 || pathIsPrefix(current, line) || pathIsPrefix(line, current))));
+            if (!continues) {
+              startRef.current = originCell;
+              dirRef.current = null;
+              if (!pathsEqual(current, [originCell])) {
+                commitPath([originCell], "connect");
+              }
+            }
+          }
           buildPathFromPointer(point.x, point.y);
         }}
-        onPointerUp={() => endPath(pathRef.current)}
-        onPointerCancel={() => endPath(pathRef.current)}
+        onPointerUp={finishPointer}
+        onPointerCancel={finishPointer}
       >
         <svg
           className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
@@ -571,7 +698,7 @@ export function SearchGame({
                   type="button"
                   data-r={r}
                   data-c={c}
-                  className={`letter-node flex h-full w-full min-w-0 items-center justify-center bg-[#141826] p-0 font-plex text-[11px] sm:text-[13px] ${
+                  className={`letter-node flex h-full w-full min-w-0 items-center justify-center bg-[#141826] p-0 ${
                     solved
                       ? "is-solved"
                       : dropping
@@ -591,18 +718,23 @@ export function SearchGame({
         </div>
       </div>
 
-      <ul className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-2">
-        {board.words.map((word) => (
-          <li
-            key={word}
-            className={`font-plex text-[10px] tracking-[0.12em] ${
-              found.includes(word) ? "text-white/30 line-through" : reveal ? "text-[#d4a017]" : "text-white/70"
-            }`}
-          >
-            {word}
-          </li>
-        ))}
-      </ul>
+      <div className="search-words">
+        <p className="search-words__label">Words to find:</p>
+        <div className="search-words__rows">
+          {listedRows.map((row) => (
+            <ul key={row.join("-")} className="search-words__list">
+              {row.map((word) => (
+                <li
+                  key={word}
+                  className={`search-words__item${found.includes(word) ? " is-found" : reveal ? " is-hint" : ""}`}
+                >
+                  {word}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

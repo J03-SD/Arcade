@@ -1,13 +1,14 @@
 export const MODES = [
   "crossword",
   "search",
+  "bedazel",
   "pivot",
   "crush",
   "alias",
   "signal",
 ] as const;
 
-export const LAUNCH_MODES = ["search", "crossword"] as const;
+export const LAUNCH_MODES = ["search", "crossword", "bedazel"] as const;
 
 /** Launch modes shown on home but not playable yet. */
 export const COMING_SOON_MODES = ["crossword"] as const;
@@ -35,6 +36,12 @@ export const MODE_META: Record<GameMode, ModeMeta> = {
     name: "Word Search",
     short: "Word Search",
     blurb: "Find the hidden terms.",
+  },
+  bedazel: {
+    id: "bedazel",
+    name: "Bedazel",
+    short: "Bedazel",
+    blurb: "Bedazzle the logo.",
   },
   pivot: { id: "pivot", name: "Pivot", short: "Pivot", blurb: "Follow the next source." },
   crush: { id: "crush", name: "Link Crush", short: "Crush", blurb: "Match the links." },
